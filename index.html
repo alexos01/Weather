@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Web App</title>
+    <style>
+        /* CSS for a clean, modern user interface */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 320px;
+        }
+        h2 { margin-top: 0; color: #333; }
+        input {
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            width: 100%;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover { background: #0056b3; }
+        
+        /* Result display styling */
+        #result {
+            margin-top: 20px;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            display: none; /* Hidden by default */
+        }
+        #result p { margin: 8px 0; font-size: 18px; color: #444; }
+        .error { color: #dc3545; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>🌤️ Weather App</h2>
+        <input type="text" id="cityInput" placeholder="Enter city name (e.g., Tokyo)" value="London">
+        <button onclick="getWeather()">Get Weather</button>
+        
+        <!-- This div will hold the weather data -->
+        <div id="result">
+            <h3 id="cityName"></h3>
+            <p id="temp"></p>
+            <p id="wind"></p>
+            <p id="condition"></p>
+        </div>
+        
+        <!-- This will show errors if the API fails -->
+        <p id="error" class="error"></p>
+    </div>
+
+    <script>
+        // WMO Weather interpretation codes mapping
+        const weatherCodes = {
+            0: "Clear sky ☀️", 1: "Mainly clear 🌤️", 2: "Partly cloudy ⛅", 3: "Overcast ☁️",
+            45: "Fog 🌫️", 48: "Rime fog 🌫️", 51: "Light drizzle 🌦️", 53: "Moderate drizzle 🌦️",
+            55: "Dense drizzle 🌧️", 61: "Slight rain 🌧️", 63: "Moderate rain 🌧️", 65: "Heavy rain 🌧️",
+            71: "Slight snow 🌨️", 73: "Moderate snow 🌨️", 75: "Heavy snow ❄️", 80: "Slight rain showers 🌦️",
+            95: "Thunderstorm ⛈️", 96: "Thunderstorm with hail ⛈️", 99: "Thunderstorm with heavy hail ⛈️"
+        };
+
+        async function getWeather() {
+            const city = document.getElementById('cityInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            const errorP = document.getElementById('error');
+            
+            // Reset UI state
+            resultDiv.style.display = 'none';
+            errorP.textContent = '';
+            
+            if (!city) {
+                errorP.textContent = '❌ Please enter a city name.';
+                return;
+            }
+
+            try {
+                // Step 1: Use the Geocoding API to convert City Name -> Latitude/Longitude
+                const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`;
+                const geoResponse = await fetch(geoUrl);
+                const geoData = await geoResponse.json();
+                
+                if (!geoData.results || geoData.results.length === 0) {
+                    throw new Error('City not found. Please check the spelling and try again.');
+                }
+                
+                const { latitude, longitude, name, country } = geoData.results[0];
+                
+                // Step 2: Fetch the actual weather data using the coordinates
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=fahrenheit`;
+                const weatherResponse = await fetch(weatherUrl);
+                const weatherData = await weatherResponse.json();
+                
+                const current = weatherData.current_weather;
+                const description = weatherCodes[current.weathercode] || "Unknown condition";
+                
+                // Step 3: Update the HTML UI with the parsed data
+                document.getElementById('cityName').textContent = `📍 ${name}, ${country}`;
+                document.getElementById('temp').textContent = `🌡️ Temperature: ${current.temperature}°F`;
+                document.getElementById('wind').textContent = `🌬️ Wind: ${current.windspeed} mph`;
+                document.getElementById('condition').textContent = `☁️ Condition: ${description}`;
+                
+                // Show the result card
+                resultDiv.style.display = 'block';
+                
+            } catch (error) {
+                // Step 4: Handle errors gracefully
+                errorP.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
