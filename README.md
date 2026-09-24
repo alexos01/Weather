@@ -68,4 +68,4 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## To use it open the link
 
-https://github.com/alexos01/Weather
+https://alexos01.github.io/Weather/
